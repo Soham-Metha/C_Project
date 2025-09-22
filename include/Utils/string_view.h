@@ -16,23 +16,7 @@ struct String_View {
 #define STR(s) ((String_View) { .len = strlen(s), .data = s })
 #define Str_Fmt(s) s.len, s.data
 
-String_View ltrim(String_View s);
-String_View rtrim(String_View s);
-String_View trim(String_View s);
-
-bool compare_str(String_View a, String_View b);
-
-bool get_index_of(String_View str, char c, size_t* index);
-
-String_View split_str_by_delim(String_View* s, char c);
-String_View split_str_by_condition(String_View* str, bool (*predicate)(char x));
-String_View split_str_by_len(String_View* str, size_t n);
-String_View split_str_by_len_reversed(String_View* str, size_t n);
-
-bool starts_with(String_View str, String_View prefix);
-bool ends_with(String_View str, String_View expected);
-
-String_View ltrim(String_View s)
+String_View sv_trim_left(String_View s)
 {
     size_t i = 0;
     while (i < s.len && isspace(s.data[i])) {
@@ -41,7 +25,7 @@ String_View ltrim(String_View s)
     return (String_View) { .len = s.len - i, .data = s.data + i };
 }
 
-String_View rtrim(String_View s)
+String_View sv_trim_right(String_View s)
 {
     size_t i = s.len;
     while (i > 0 && isspace(s.data[i - 1])) {
@@ -50,12 +34,12 @@ String_View rtrim(String_View s)
     return (String_View) { .len = i, .data = s.data };
 }
 
-String_View trim(String_View s)
+String_View sv_trim(String_View s)
 {
-    return rtrim(ltrim(s));
+    return sv_trim_right(sv_trim_left(s));
 }
 
-bool compare_str(String_View a, String_View b)
+bool sv_compare(String_View a, String_View b)
 {
     if (a.len != b.len) {
         return false;
@@ -64,7 +48,7 @@ bool compare_str(String_View a, String_View b)
     }
 }
 
-bool get_index_of(String_View str, char c, size_t* index)
+bool sv_index_of(String_View str, char c, size_t* index)
 {
     size_t i = 0;
     while (i < str.len && str.data[i] != c) {
@@ -79,34 +63,7 @@ bool get_index_of(String_View str, char c, size_t* index)
     return false;
 }
 
-String_View split_str_by_delim(String_View* s, char c)
-{
-    size_t i = 0;
-    while (i < s->len && s->data[i] != c) {
-        i++;
-    }
-
-    String_View res = split_str_by_len(s, i);
-
-    if (s->len > 0 && s->data[0] == c) {     // discard the delim
-        s->len -= 1;
-        s->data += 1;
-    }
-
-    return res;
-}
-
-String_View split_str_by_condition(String_View* str, bool (*predicate)(char x))
-{
-    size_t i = 0;
-    while (i < str->len && predicate(str->data[i])) {
-        i += 1;
-    }
-
-    return split_str_by_len(str, i);
-}
-
-String_View split_str_by_len(String_View* str, size_t n)
+String_View sv_split_by_len(String_View* str, size_t n)
 {
     if (n > str->len) {
         n = str->len;
@@ -123,20 +80,50 @@ String_View split_str_by_len(String_View* str, size_t n)
     return result;
 }
 
-String_View split_str_by_len_reversed(String_View* str, size_t n)
+String_View sv_split_by_len_reversed(String_View* str, size_t n)
 {
     if (n > str->len) {
         n = str->len;
     }
 
-    String_View result = { .data = str->data + str->len - n, .len = n };
+    String_View result = {
+        .data = str->data + str->len - n,
+        .len  = n
+    };
 
     str->len -= n;
 
     return result;
 }
 
-bool starts_with(String_View str, String_View prefix)
+String_View sv_split_by_delim(String_View* s, char c)
+{
+    size_t i = 0;
+    while (i < s->len && s->data[i] != c) {
+        i++;
+    }
+
+    String_View res = sv_split_by_len(s, i);
+
+    if (s->len > 0 && s->data[0] == c) {     // discard the delim
+        s->len -= 1;
+        s->data += 1;
+    }
+
+    return res;
+}
+
+String_View sv_split_by_condition(String_View* str, bool (*predicate)(char x))
+{
+    size_t i = 0;
+    while (i < str->len && predicate(str->data[i])) {
+        i += 1;
+    }
+
+    return sv_split_by_len(str, i);
+}
+
+bool sv_starts_with(String_View str, String_View prefix)
 {
     if (prefix.len <= str.len) {
         for (size_t i = 0; i < prefix.len; ++i) {
@@ -149,7 +136,7 @@ bool starts_with(String_View str, String_View prefix)
     return false;
 }
 
-bool ends_with(String_View str, String_View expected)
+bool sv_ends_with(String_View str, String_View expected)
 {
     if (expected.len <= str.len) {
         String_View actual = {
@@ -157,7 +144,7 @@ bool ends_with(String_View str, String_View expected)
             .len  = expected.len
         };
 
-        return compare_str(expected, actual);
+        return sv_compare(expected, actual);
     }
 
     return false;
