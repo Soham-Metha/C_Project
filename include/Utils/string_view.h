@@ -14,7 +14,7 @@ struct String_View {
 };
 
 #define STR(s) ((String_View) { .len = strlen(s), .data = s })
-#define Str_Fmt(s) s.len, s.data
+#define Str_Fmt(s) (int)s.len, s.data
 
 String_View sv_trim_left(String_View s)
 {
