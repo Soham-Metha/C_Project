@@ -20,7 +20,7 @@ typedef struct File_Content File_Content;
 
 struct File_Content {
     String_View content;
-    File_error  error_code;
+    File_error error_code;
 };
 
 File_Content arena_file_open_into_sv(Arena* arena, const char* file_path)
@@ -36,14 +36,13 @@ File_Content arena_file_open_into_sv(Arena* arena, const char* file_path)
     } else if (fseek(f, 0, SEEK_END) != 0) {    out.error_code = FILE_ERR_CANT_READ;
     } else if ((file_size = ftell(f)) < 0) {    out.error_code = FILE_ERR_CANT_REACH_END;
     } else {
-        char* buf = (char*)region_alloc(arena, out.content.len + 1);
+        char* buf      = (char*)region_alloc(arena, out.content.len + 1);
         buf[file_size] = '\0';
 
         rewind(f);
-        if (file_size != fread(buf, 1, file_size, f)) {     out.error_code = FILE_ERR_CANT_READ_CONTENTS;
-        } else {
-            out.content    = (String_View) { .data = buf, .len = file_size };
-        }
+        out.content.len = file_size;
+        if (out.content.len != fread(buf, 1, file_size, f))     out.error_code = FILE_ERR_CANT_READ_CONTENTS;
+        else out.content.data = buf;
     }
 
     fclose(f);
