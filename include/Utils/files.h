@@ -1,5 +1,6 @@
 #ifndef UTILS_FILES
 #define UTILS_FILES
+#include <Utils/mem_manager.h>
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -7,6 +8,7 @@
 #include <stdlib.h>
 
 enum File_error {
+    FILE_ERR_OK = 0,
     FILE_ERR_UNABLE_TO_OPEN,
     FILE_ERR_CANT_READ,
     FILE_ERR_CANT_REACH_END,
@@ -14,52 +16,37 @@ enum File_error {
 };
 
 typedef enum File_error File_error;
-typedef struct File File;
+typedef struct File_Content File_Content;
 
-struct File {
-    char* content;
-    uint64_t size;
-    bool is_valid;
-    File_error error_code;
+struct File_Content {
+    String_View content;
+    File_error  error_code;
 };
 
-File file_open(const char* file_path, const char* mode)
+File_Content arena_file_open_into_sv(Arena* arena, const char* file_path)
 {
-    File out = { .is_valid = true };
-    FILE* f  = fopen(file_path, mode);
-    if (!f) {
-        out.is_valid   = false;
-        out.error_code = FILE_ERR_UNABLE_TO_OPEN;
-        return out;
+    FILE* f;
+    long file_size;
+    File_Content out = {
+        .content    = { .data = NULL, .len = 0 },
+        .error_code = FILE_ERR_OK,
+    };
+
+    if (!(f = fopen(file_path, "r"))) {         out.error_code = FILE_ERR_UNABLE_TO_OPEN;
+    } else if (fseek(f, 0, SEEK_END) != 0) {    out.error_code = FILE_ERR_CANT_READ;
+    } else if ((file_size = ftell(f)) < 0) {    out.error_code = FILE_ERR_CANT_REACH_END;
+    } else {
+        char* buf = (char*)region_alloc(arena, out.content.len + 1);
+        buf[file_size] = '\0';
+
+        rewind(f);
+        if (file_size != fread(buf, 1, file_size, f)) {     out.error_code = FILE_ERR_CANT_READ_CONTENTS;
+        } else {
+            out.content    = (String_View) { .data = buf, .len = file_size };
+        }
     }
 
-    if (fseek(f, 0, SEEK_END) != 0) {
-        out.is_valid   = false;
-        out.error_code = FILE_ERR_CANT_READ;
-        return out;
-    }
-
-    long fileSize = ftell(f);
-    if (fileSize < 0) {
-        out.is_valid   = false;
-        out.error_code = FILE_ERR_CANT_REACH_END;
-        return out;
-    }
-
-    rewind(f);
-    out.size  = fileSize;
-
-    char* buf = (char*)malloc(out.size + 1);
-    assert(buf);
-
-    if (fread(buf, 1, out.size, f) != out.size) {
-        out.is_valid   = false;
-        out.error_code = FILE_ERR_CANT_READ_CONTENTS;
-        return out;
-    }
-
-    buf[out.size] = '\0';
-    out.content   = buf;
+    fclose(f);
     return out;
 }
 
