@@ -2,10 +2,9 @@
 #define UTILS_FILES
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-typedef enum File_error File_error;
 
 enum File_error {
     FILE_ERR_UNABLE_TO_OPEN,
@@ -13,6 +12,9 @@ enum File_error {
     FILE_ERR_CANT_REACH_END,
     FILE_ERR_CANT_READ_CONTENTS,
 };
+
+typedef enum File_error File_error;
+typedef struct File File;
 
 struct File {
     char* content;
