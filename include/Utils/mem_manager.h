@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define REGION_DEFAULT_CAPACITY 65536
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 typedef struct Region Region;
 typedef struct Arena Arena;
@@ -32,61 +33,68 @@ Region* region_create(size_t capacity)
     return part;
 }
 
-char* arena_insert_or_expand(Arena* arena, Region* cur, size_t size, size_t aligned_address_mask)
+char* arena_insert_or_expand(Arena* arena, Region* cur, size_t size, size_t addr_offset_mask)
 {
-    uintptr_t tmp   = (uintptr_t)(cur->buffer + cur->size);
-    tmp             = (tmp + aligned_address_mask) & ~aligned_address_mask;
+    // pointer to the next unused address in buffer
+    uintptr_t next_addr         = (uintptr_t)(cur->buffer + cur->size);
+    // pointer to the next unused aligned address in buffer
+    uintptr_t next_aligned_addr = (next_addr + addr_offset_mask) & ~addr_offset_mask;
 
-    char* ptr       = (char*)tmp;
-    size_t realSize = (ptr + size) - (cur->buffer + cur->size);
+    // `next_addr + addr_offset_mask` ensures that the address moves into the next aligned address
+    //  `& ~addr_offset_mask` discards the offset bits from the address obtained, to get the actual aligned address
 
-    if (cur->size + realSize <= cur->capacity) {
-        memset(ptr, 0, realSize);
-        cur->size += realSize;
-        return ptr;
+    // actual size we'll have to allocate, after considering the padding bits
+    size_t real_size            = (next_aligned_addr - next_addr) + size;
+
+    if (cur->size + real_size <= cur->capacity) {
+        memset((char*)next_addr, 0, real_size);
+        cur->size += real_size;
+        return (char*)next_addr;
     }
 
     if (cur->next) {
-        return arena_insert_or_expand(arena, cur->next, size, aligned_address_mask);
+        return arena_insert_or_expand(arena, cur->next, size, addr_offset_mask);
     }
 
-    size_t worstCase = (size + aligned_address_mask) & ~aligned_address_mask;
+    // worst case scenario: none of the existing nodes in the LL have enough memory
+    // in this case, we'll have to create a new node & allocate space inside that node
 
-    Region* part     = region_create(
-        worstCase > REGION_DEFAULT_CAPACITY
-            ? worstCase
-            : REGION_DEFAULT_CAPACITY);
+    size_t aligned_size = (size + addr_offset_mask) & ~addr_offset_mask;
+    Region* part        = region_create(MAX(aligned_size, REGION_DEFAULT_CAPACITY));
 
-    cur               = arena->last;
-    arena->last->next = part;
-    arena->last       = part;
+    cur                 = arena->last;
+    cur->next           = part;
+    arena->last         = part;
 
-    return arena_insert_or_expand(arena, cur->next, size, aligned_address_mask);
+    return arena_insert_or_expand(arena, cur->next, size, addr_offset_mask);
 }
 
 void* region_alloc_aligned(Arena* arena, size_t size, size_t alignment)
 {
+    // arena is empty
     if (arena->last == NULL) {
         assert(arena->first == NULL);
 
-        Region* part = region_create(
-            size > REGION_DEFAULT_CAPACITY ? size : REGION_DEFAULT_CAPACITY);
+        Region* part = region_create(MAX(size, REGION_DEFAULT_CAPACITY));
 
         arena->last  = part;
         arena->first = part;
     }
 
+    // fetch pointer to the next available unused memory
     if (size == 0) {
         return arena->last->buffer + arena->last->size;
     }
 
+    // ensure that alignment is a power of 2
     assert((alignment & (alignment - 1)) == 0);
 
-    return arena_insert_or_expand(arena, arena->last, size, alignment - 1);
+    return arena_insert_or_expand(arena, arena->first, size, alignment - 1);
 }
 
 void* region_alloc(Arena* arena, size_t size)
 {
+    // wrapper function for alignment
     return region_alloc_aligned(arena, size, sizeof(void*));
 }
 
