@@ -150,4 +150,15 @@ bool sv_ends_with(String_View str, String_View expected)
     return false;
 }
 
+uint64_t sv_to_uint(String_View* s)
+{
+    uint64_t val = 0;
+    while (s->len) {
+        assert(s->data[0] >= '0' && s->data[0] <= '9');
+        val = val * 10 + s->data[0] - '0';
+        sv_split_by_len(s, 1);
+    }
+    return val;
+}
+
 #endif
