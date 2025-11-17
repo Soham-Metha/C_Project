@@ -14,7 +14,7 @@ struct String_View {
 };
 
 #define STR(s) ((String_View) { .len = strlen(s), .data = s })
-#define Str_Fmt(s) s.len, s.data
+#define Str_Fmt(s) (int)s.len, s.data
 
 String_View sv_trim_left(String_View s)
 {
@@ -148,6 +148,17 @@ bool sv_ends_with(String_View str, String_View expected)
     }
 
     return false;
+}
+
+uint64_t sv_to_uint(String_View* s)
+{
+    uint64_t val = 0;
+    while (s->len) {
+        assert(s->data[0] >= '0' && s->data[0] <= '9');
+        val = val * 10 + s->data[0] - '0';
+        sv_split_by_len(s, 1);
+    }
+    return val;
 }
 
 #endif
