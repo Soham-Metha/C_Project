@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UTILS_MEM_MANAGER_1
+#define UTILS_MEM_MANAGER_1
 #include <Utils/string_view.h>
 #include <assert.h>
 #include <stdarg.h>
@@ -23,6 +24,16 @@ struct Arena {
     Region* first;
     Region* last;
 };
+
+void* region_alloc(Arena* arena, size_t size);
+const char* arena_sv_to_cstr(Arena* arena, String_View str);
+String_View arena_cstr_concat(Arena* arena, const char* a, const char* b);
+void arena_clear(Arena* arena);
+void arena_free(Arena* arena);
+
+#endif
+#ifdef MEM_MANAGER_IMPL
+#undef MEM_MANAGER_IMPL
 
 Region* region_create(size_t capacity)
 {
@@ -134,3 +145,5 @@ void arena_free(Arena* arena)
         free(part);
     }
 }
+
+#endif

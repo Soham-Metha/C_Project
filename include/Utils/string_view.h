@@ -1,5 +1,6 @@
-#ifndef STRING_VIEW
-#define STRING_VIEW
+#ifndef UTILS_STRING_VIEW_1
+#define UTILS_STRING_VIEW_1
+#include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -15,6 +16,35 @@ struct String_View {
 
 #define STR(s) ((String_View) { .len = strlen(s), .data = s })
 #define Str_Fmt(s) (int)s.len, s.data
+
+String_View sv_trim_left(String_View s);
+String_View sv_trim_right(String_View s);
+String_View sv_trim(String_View s);
+bool sv_compare(String_View a, String_View b);
+bool sv_index_of(String_View str, char c, size_t* index);
+String_View sv_split_by_len(String_View* str, size_t n);
+String_View sv_split_by_len_reversed(String_View* str, size_t n);
+String_View sv_split_by_delim(String_View* s, char c);
+String_View sv_split_by_condition(String_View* str, bool (*predicate)(char x));
+bool sv_starts_with(String_View str, String_View prefix);
+bool sv_ends_with(String_View str, String_View expected);
+uint64_t sv_to_uint(String_View* s);
+
+#define SV_SCAN(sv, cnt, fmt, ...)              \
+    do {                                        \
+        int _used = 0;                          \
+        int _ret  = sscanf((sv).data, fmt "%n", \
+             __VA_ARGS__, &_used);              \
+        assert(_ret == cnt);                    \
+        assert((sv).len >= (uint64_t)_used);    \
+        (sv).data += _used;                     \
+        (sv).len -= _used;                      \
+    } while (0)
+
+#endif
+
+#ifdef STRING_VIEW_IMPL
+#undef STRING_VIEW_IMPL
 
 String_View sv_trim_left(String_View s)
 {

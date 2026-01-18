@@ -1,5 +1,5 @@
-#ifndef UTILS_FILES
-#define UTILS_FILES
+#ifndef UTILS_FILES_1
+#define UTILS_FILES_1
 #include <Utils/mem_manager.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -22,6 +22,13 @@ struct File_Content {
     String_View content;
     File_error error_code;
 };
+
+File_Content arena_file_open_into_sv(Arena* arena, const char* file_path);
+String_View file_unwrap(File_Content f) ;
+
+#endif
+#ifdef UTILS_FILES_IMPL
+#undef UTILS_FILES_IMPL
 
 File_Content arena_file_open_into_sv(Arena* arena, const char* file_path)
 {
@@ -47,6 +54,12 @@ File_Content arena_file_open_into_sv(Arena* arena, const char* file_path)
 
     fclose(f);
     return out;
+}
+
+String_View file_unwrap(File_Content f) 
+{
+    assert(f.error_code == FILE_ERR_OK);
+    return f.content;
 }
 
 #endif

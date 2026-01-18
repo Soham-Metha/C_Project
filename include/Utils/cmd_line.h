@@ -1,5 +1,5 @@
-#ifndef UTILS_CLI
-#define UTILS_CLI
+#ifndef UTILS_CLI_1
+#define UTILS_CLI_1
 #include <Utils/string_view.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -12,7 +12,17 @@ struct map_cstr_cstr {
     String_View name;
     String_View val;
     String_View desc;
-} Flags[MAX_FLAG_CNT];
+};
+
+void cli_flag_push(const char* name, const char* desc);
+String_View cli_flag_get_val(String_View name);
+void cli_parse(int* argc, char*** argv);
+
+#endif
+#ifdef UTILS_CLI_IMPL
+#undef UTILS_CLI_IMPL
+
+struct map_cstr_cstr Flags[MAX_FLAG_CNT];
 uint8_t flag_cnt = 0;
 
 void cli_flag_push(const char* name, const char* desc)
